@@ -1,0 +1,5 @@
+[default.databases.main]
+url = "db/db.sqlite"
+
+[default.databases.other]
+url = "db-other/token_blacklist.sqlite"
