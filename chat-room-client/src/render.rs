@@ -280,7 +280,7 @@ impl<'r> AuthenticatedState<'r> {
                 .map(|(_, message)| {
                     let text = format!("{}: {}", message.sender_id, message.content);
                     if let Some(ref profile) = self.profile {
-                        if message.sender_id == profile.name {
+                        if message.sender_id == profile.id {
                             let line = Line::from(text.clone()).right_aligned();
                             return ListItem::new(line);
                         }
