@@ -14,7 +14,6 @@ use crate::base::{ApiResult, ApiResultBuilder};
 use crate::{
     authentication::UserId,
     base::{Db, Error, Identifiable, Rx, Tx},
-    serde_datetime::date_format,
 };
 
 #[derive(Serialize)]

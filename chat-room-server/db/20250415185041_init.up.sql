@@ -19,3 +19,9 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_id TEXT NOT NULL,
     create_date INT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS token_blacklist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL
+);
+

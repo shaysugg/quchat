@@ -7,7 +7,10 @@
     [X]- sender of each message
     [x]- user profile
     [x] - logout
+
+    [x] create new room
     [ ]- date of each message
+    [X]- right or left messages
 
 ### Profile section
     settings

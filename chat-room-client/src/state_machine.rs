@@ -6,8 +6,8 @@ use tokio::{sync::mpsc::UnboundedSender, time::error};
 use crate::{
     chat_room_client::{self, Message},
     state::{
-        Action, App, AuthenticatedAction, AuthenticatedState, CurrentRoomState, SignedOutAction,
-        SignedOutState, State, Textfield,
+        Action, App, AuthenticatedAction, AuthenticatedState, CreateRoomState, CurrentRoomState,
+        SignedOutAction, SignedOutState, State, Textfield,
     },
     token,
 };
@@ -146,16 +146,33 @@ pub fn handle_action(
                         }
                         None => state.selected_room_index = Some(0),
                     },
+                    AuthenticatedAction::ScrollMessagesDown => {
+                        if let Some(ref mut room) = state.current_room {
+                            if room.selected_message < room.messages.len() {
+                                room.selected_message = room.selected_message + 1;
+                            }
+                        }
+                    }
+                    AuthenticatedAction::ScrollMessagesUp => {
+                        if let Some(ref mut room) = state.current_room {
+                            if room.selected_message > 0 {
+                                room.selected_message = room.selected_message - 1;
+                            }
+                        }
+                    }
                     AuthenticatedAction::EnterRoom => {
                         if let Some(index) = state.selected_room_index {
                             if let Some(ref prev_room) = state.current_room {
                                 prev_room.abort_join_handles();
                             }
+                            let mut message_field = Textfield::new("message");
+                            message_field.focused = true;
+                            message_field.hint = "<Enter> Send";
                             state.current_room_index = Some(index);
                             state.current_room = Some(CurrentRoomState {
                                 messages: Vec::new(),
                                 join_handles: Vec::new(),
-                                message_field: Textfield::new("message"),
+                                message_field,
                                 name: state.rooms[index].name.to_string(),
                                 id: state.rooms[index].id.to_string(),
                                 selected_message: 0,
@@ -195,20 +212,6 @@ pub fn handle_action(
                                 )
                                 .await;
                             });
-                        }
-                    }
-                    AuthenticatedAction::SelectNextMessage => {
-                        if let Some(ref mut room) = state.current_room {
-                            if room.selected_message + 1 < room.messages.len() {
-                                room.selected_message += 1;
-                            }
-                        }
-                    }
-                    AuthenticatedAction::SelectPrevMessage => {
-                        if let Some(ref mut room) = state.current_room {
-                            if room.selected_message > 0 {
-                                room.selected_message -= 1;
-                            }
                         }
                     }
                     AuthenticatedAction::LoadRooms => {
@@ -319,6 +322,44 @@ pub fn handle_action(
                         Ok(_) => new_signout(app),
                         Err(error) => app.error = Some(error.to_string()),
                     },
+                    AuthenticatedAction::StartCreatingRoom => {
+                        state.create_room = Some(CreateRoomState::new())
+                    }
+                    AuthenticatedAction::CreateNewRoom => {
+                        if let Some(ref mut create_room) = state.create_room {
+                            let token = state.token.clone();
+                            let sideeffect = sideeffect.clone();
+                            let params = chat_room_client::CreateRoomParam {
+                                name: create_room.name_field.text.clone(),
+                            };
+                            tokio::spawn(async move {
+                                let res =
+                                    chat_room_client::create_room(&client, &params, &token).await;
+                                sideeffect
+                                    .send(Action::Authenticated(
+                                        AuthenticatedAction::NewRoomIsCreated(res),
+                                    ))
+                                    .unwrap();
+                            });
+                        }
+                    }
+                    AuthenticatedAction::NewRoomIsCreated(res) => match res {
+                        Ok(room) => {
+                            state.rooms.push(room);
+                            state.create_room = None;
+                        }
+                        Err(err) => app.error = Some(err.to_string()),
+                    },
+                    AuthenticatedAction::CreateRoomName(action) => {
+                        if let Some(ref mut create_room) = state.create_room {
+                            create_room.name_field.handle_action(&action);
+                        }
+                    }
+                    AuthenticatedAction::CancelNewRoom => {
+                        if state.create_room.is_some() {
+                            state.create_room = None
+                        }
+                    }
                 }
             }
         }

@@ -23,6 +23,7 @@ pub struct AuthenticatedState<'r> {
     pub current_room_index: Option<usize>,
     pub selected_room_index: Option<usize>,
     pub current_room: Option<CurrentRoomState<'r>>,
+    pub create_room: Option<CreateRoomState<'r>>,
     pub profile: Option<UserProfile>,
     //settings
 }
@@ -36,6 +37,7 @@ impl<'r> AuthenticatedState<'r> {
             selected_room_index: None,
             current_room_index: None,
             profile: None,
+            create_room: None,
         }
     }
 }
@@ -60,6 +62,18 @@ impl<'r> CurrentRoomState<'r> {
 impl<'r> Drop for CurrentRoomState<'r> {
     fn drop(&mut self) {
         self.abort_join_handles();
+    }
+}
+
+pub struct CreateRoomState<'r> {
+    pub name_field: Textfield<'r>,
+}
+
+impl CreateRoomState<'_> {
+    pub fn new() -> Self {
+        CreateRoomState {
+            name_field: Textfield::new("name"),
+        }
     }
 }
 
@@ -94,9 +108,9 @@ pub enum AuthenticatedAction {
     EnterRoom,
     ExitRoom,
     SendMessage,
-    SelectNextMessage,
-    SelectPrevMessage,
+
     ChatText(TextFieldAction),
+    CreateRoomName(TextFieldAction),
     LoadUserProfile,
     UserprofileLoaded(chat_room_client::Result<UserProfile>),
     LoadRooms,
@@ -107,6 +121,12 @@ pub enum AuthenticatedAction {
     MessageChanged(Message),
     Signout,
     SignoutCompleted(chat_room_client::Result<()>),
+    ScrollMessagesUp,
+    ScrollMessagesDown,
+    StartCreatingRoom,
+    CreateNewRoom,
+    CancelNewRoom,
+    NewRoomIsCreated(chat_room_client::Result<Room>),
 }
 
 impl<'r> SignedOutState<'r> {
@@ -122,6 +142,7 @@ pub struct Textfield<'r> {
     pub label: &'r str,
     pub text: String,
     pub focused: bool,
+    pub hint: &'r str,
 }
 
 impl<'r> Textfield<'r> {
@@ -130,6 +151,7 @@ impl<'r> Textfield<'r> {
             label: label,
             text: String::new(),
             focused: false,
+            hint: "",
         }
     }
 
@@ -176,6 +198,7 @@ impl<'r> AuthenticatedState<'r> {
                 sender_id: name.to_string(),
                 room_id: name.to_string(),
                 create_date: 0,
+                sender_name: name.to_string(),
             })
             .collect::<Vec<Message>>();
 
@@ -195,6 +218,7 @@ impl<'r> AuthenticatedState<'r> {
             }),
             selected_room_index: Some(0),
             profile: None,
+            create_room: None,
         }
     }
 }

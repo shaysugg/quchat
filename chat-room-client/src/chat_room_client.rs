@@ -1,5 +1,6 @@
-use std::{fmt::Display, str::FromStr};
+use std::{char::from_digit, fmt::Display, str::FromStr};
 
+use chrono::{DateTime, Local, TimeZone};
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +17,7 @@ pub struct Message {
     pub sender_id: String,
     pub room_id: String,
     pub create_date: i32,
+    pub sender_name: String,
 }
 
 pub struct User {
@@ -126,6 +128,27 @@ pub async fn rooms(client: &Client, token: &str) -> Result<GetRoomsResponse> {
         .await?;
 
     handle_result(response).map(|r| GetRoomsResponse { rooms: r })
+}
+
+#[derive(Serialize)]
+pub struct CreateRoomParam {
+    pub name: String,
+}
+
+pub async fn create_room(client: &Client, params: &CreateRoomParam, token: &str) -> Result<Room> {
+    let response = client
+        .inner
+        .post(URLs::create_room())
+        .json(params)
+        .bearer_auth(token)
+        .send()
+        .await
+        .map_err(|e| Error::from(e))
+        .inspect_err(|e| handle_unauthorized(e, client.unauthtorized_sender.clone()))?
+        .json::<BaseRes<Room>>()
+        .await?;
+
+    handle_result(response)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -340,6 +363,10 @@ impl URLs {
 
     fn signout() -> String {
         format!("{}/auth/signout", URLs::base())
+    }
+
+    fn create_room() -> String {
+        format!("{}/rooms", URLs::base())
     }
 }
 

@@ -11,7 +11,7 @@ use rocket_db_pools::Connection;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::base::{ApiResult, ApiResultBuilder, Db, TokenBlackListDb};
+use crate::base::{ApiResult, ApiResultBuilder, Db};
 use crate::jwt::*;
 use crate::user::User;
 
@@ -55,7 +55,7 @@ impl<'r> FromRequest<'r> for UserId {
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         //TODO: use my error
         let db = try_outcome!(req
-            .guard::<Connection<TokenBlackListDb>>()
+            .guard::<Connection<Db>>()
             .await
             .map_error(|_| (Status::InternalServerError, ApiKeyError::Db)));
 
@@ -126,7 +126,7 @@ async fn register(
 
 pub async fn check_token_expired(
     token: &str,
-    mut db: Connection<TokenBlackListDb>,
+    mut db: Connection<Db>,
 ) -> Result<String, ApiKeyError> {
     #[derive(Serialize, Deserialize, Debug)]
     struct Record {
@@ -194,7 +194,7 @@ async fn signin(mut db: Connection<Db>, params: Json<SigninParams>) -> ApiResult
 }
 
 #[post("/signout")]
-async fn signout(mut db: Connection<TokenBlackListDb>, user_id: UserId) -> ApiResult<String> {
+async fn signout(mut db: Connection<Db>, user_id: UserId) -> ApiResult<String> {
     let res = sqlx::query!(
         "INSERT into token_blacklist (token) VALUES ($1)",
         user_id.token

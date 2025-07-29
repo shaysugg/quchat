@@ -1,18 +1,20 @@
 use crate::asciiart;
+use crate::chat_room_client::Message;
 use crate::state::{
-    Action, App, AuthenticatedState, SignedOutAction, SignedOutState, State, TextFieldAction,
-    Textfield,
+    Action, App, AuthenticatedState, CreateRoomState, SignedOutAction, SignedOutState, State,
+    TextFieldAction, Textfield,
 };
 use ratatui::layout::{Constraint, Flex, Layout, Margin, Offset};
 use ratatui::prelude::{Buffer, Rect};
 
 use ratatui::style::{Color, Modifier, Style, Stylize};
 
-use ratatui::symbols::border;
+use ratatui::symbols::{block, border};
 use ratatui::text::{Line, Span, Text};
+use ratatui::widgets::ListItem;
 use ratatui::widgets::{
-    Block, BorderType, Borders, Clear, HighlightSpacing, List, ListItem, ListState, Padding,
-    Paragraph, Scrollbar, ScrollbarState, StatefulWidget, Widget,
+    Block, BorderType, Borders, Clear, HighlightSpacing, List, ListState, Padding, Paragraph,
+    Scrollbar, ScrollbarState, StatefulWidget, Widget,
 };
 use ratatui::DefaultTerminal;
 
@@ -153,16 +155,16 @@ impl<'r> Instructable<'r> for State<'r> {
                             key: "ESC",
                         },
                         Instructions {
-                            name: "Send Message",
-                            key: "Enter",
-                        },
-                        Instructions {
                             name: "Up/Down",
                             key: "↑↓",
                         },
                         Instructions {
                             name: "SignOut",
                             key: "^s",
+                        },
+                        Instructions {
+                            name: "Create Room",
+                            key: "^r",
                         },
                     ]
                 } else {
@@ -172,18 +174,37 @@ impl<'r> Instructable<'r> for State<'r> {
                             key: "↑↓",
                         },
                         Instructions {
-                            name: "Enter",
-                            key: "select room",
+                            name: "select room",
+                            key: "Enter",
                         },
                         Instructions {
                             name: "SignOut",
                             key: "^s",
+                        },
+                        Instructions {
+                            name: "Create Room",
+                            key: "^r",
                         },
                     ]
                 }
             }
             _ => Vec::new(),
         }
+    }
+}
+
+impl<'r> Instructable<'r> for CreateRoomState<'r> {
+    fn instructions(&self) -> Vec<Instructions<'static>> {
+        vec![
+            Instructions {
+                name: "Create",
+                key: "Enter",
+            },
+            Instructions {
+                name: "Cancel",
+                key: "ESC",
+            },
+        ]
     }
 }
 
@@ -200,6 +221,7 @@ impl<'r> Widget for &Textfield<'r> {
         let block = Block::bordered()
             .title(self.label)
             .border_style(style)
+            .title_bottom(Line::from(self.hint).right_aligned())
             .border_type(BorderType::Rounded);
 
         Paragraph::new(Text::from(self.text.as_str()))
@@ -218,6 +240,7 @@ impl<'r> Widget for &AuthenticatedState<'r> {
 
         self.render_menu(menu, buf);
         self.render_main(main, buf);
+        self.render_create_room(area, buf);
     }
 }
 
@@ -245,10 +268,15 @@ impl<'r> AuthenticatedState<'r> {
             .map(|(i, room)| ListItem::from(room.name.clone()))
             .collect();
 
+        let highlight_style = match self.current_room {
+            Some(_) => Style::new().bold().cyan(),
+            None => Style::new().bold(),
+        };
+
         let list = List::new(items)
             .block(block)
-            .highlight_symbol(">")
-            .highlight_style(Style::new().bold())
+            .highlight_symbol("> ")
+            .highlight_style(highlight_style)
             .highlight_spacing(HighlightSpacing::Always);
 
         let mut list_state = ListState::default();
@@ -258,10 +286,36 @@ impl<'r> AuthenticatedState<'r> {
         StatefulWidget::render(&list, list_area, buf, &mut list_state);
     }
 
+    fn render_create_room(&self, area: Rect, buf: &mut Buffer) {
+        if let Some(ref create_room) = self.create_room {
+            let block = Block::default()
+                .border_type(BorderType::Plain)
+                .title("Create Room")
+                .border_type(BorderType::Plain)
+                .title_bottom(
+                    create_room
+                        .instructions()
+                        .iter()
+                        .flat_map(|i| i.spans())
+                        .collect::<Vec<Span>>(),
+                );
+            let area = center(
+                area,
+                Constraint::Percentage(50),
+                Constraint::Length(5), // top and bottom border + content
+            );
+            Clear.render(area, buf);
+            let field_area = block.inner(area);
+            block.render(area, buf);
+            create_room.name_field.render(field_area, buf);
+        }
+    }
+
     fn render_main(&self, area: Rect, buf: &mut Buffer) {
         let main_block = Block::bordered()
             .border_set(border::THICK)
-            .borders(Borders::LEFT);
+            .borders(Borders::LEFT)
+            .padding(Padding::horizontal(2));
 
         let main_inner = main_block.inner(area);
 
@@ -278,24 +332,27 @@ impl<'r> AuthenticatedState<'r> {
                 .iter()
                 .enumerate()
                 .map(|(_, message)| {
-                    let text = format!("{}: {}", message.sender_id, message.content);
                     if let Some(ref profile) = self.profile {
                         if message.sender_id == profile.id {
-                            let line = Line::from(text.clone()).right_aligned();
-                            return ListItem::new(line);
+                            let text =
+                                Text::from(message_content(message).to_vec()).right_aligned();
+                            return ListItem::new(text);
                         }
                     }
 
-                    let line = Line::from(text.clone());
-                    return ListItem::new(line);
+                    let text = Text::from(message_content(message).to_vec()).cyan();
+                    return ListItem::new(text);
                 })
                 .collect();
 
-            let mut scrollbar_state =
-                ScrollbarState::new(items.len()).position(room.selected_message);
+            let mut scrollbar_state = ScrollbarState::default()
+                .content_length(room.messages.len())
+                .position(room.selected_message);
+
+            let mut list_state = ListState::default().with_selected(Some(room.selected_message));
             let list = List::new(items);
 
-            Widget::render(list, messages_are, buf);
+            StatefulWidget::render(list, messages_are, buf, &mut list_state);
 
             let scroll = Scrollbar::default();
 
@@ -306,6 +363,25 @@ impl<'r> AuthenticatedState<'r> {
             let text = Text::from("Select a room to start chat")
                 .alignment(ratatui::layout::Alignment::Center);
             text.render(main_inner, buf);
+        }
+
+        fn message_content(message: &Message) -> [Line; 4] {
+            [
+                Line::from(message_border(
+                    message.content.len() + message.sender_name.len() + 3,
+                )),
+                Line::from(vec![
+                    Span::from(message.sender_name.clone()).bold(),
+                    Span::from(" : "),
+                    Span::from(message.content.clone()),
+                ]),
+                Line::from(format!("{}", pretty_date(message.create_date))).italic(),
+                Line::from(message_border(pretty_date(message.create_date).len())),
+            ]
+        }
+
+        fn message_border(size: usize) -> String {
+            (0..size).into_iter().map(|_| '-').collect::<String>()
         }
     }
 }
@@ -320,4 +396,11 @@ fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
         .areas(area);
     let [area] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
     area
+}
+
+fn pretty_date(timestamp: i32) -> String {
+    let utc: chrono::DateTime<chrono::Utc> =
+        chrono::DateTime::from_timestamp(timestamp as i64, 0).unwrap();
+    let local: chrono::DateTime<chrono::Local> = utc.with_timezone(&chrono::Local);
+    local.format("%m-%d %H:%M").to_string()
 }

@@ -11,10 +11,6 @@ pub struct Rx<T>(pub flume::Receiver<T>);
 #[database("main")]
 pub struct Db(pub sqlx::SqlitePool);
 
-#[derive(rocket_db_pools::Database)]
-#[database("other")]
-pub struct TokenBlackListDb(pub sqlx::SqlitePool);
-
 pub type ApiResult<T> = Result<Json<BaseRes<T>>, Error<'static>>;
 pub struct ApiResultBuilder;
 impl ApiResultBuilder {
@@ -50,7 +46,8 @@ pub enum Error<'r> {
     Logical(Json<SimpleError<'r>>),
     #[response(status = 401)]
     Unauthorized(Json<SimpleError<'r>>),
-    Internal(Json<SimpleError<'r>>),
+    #[response(status = 500)]
+    Internal(()),
 }
 
 impl<'r> Error<'r> {

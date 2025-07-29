@@ -11,9 +11,7 @@ pub fn unauthorized() -> ApiResult<()> {
 
 #[catch(500)]
 pub fn internal_server() -> ApiResult<()> {
-    Err(Error::Internal(Json(SimpleError {
-        msg: "Internal Server Error",
-    })))
+    Err(Error::Internal(()))
 }
 
 #[catch(404)]

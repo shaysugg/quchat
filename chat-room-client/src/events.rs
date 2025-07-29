@@ -85,24 +85,36 @@ impl<'r> AuthenticatedState<'r> {
                 KeyCode::Down if self.current_room.is_none() => {
                     Some(AuthenticatedAction::SelectNextRoom)
                 }
+                KeyCode::Up if self.current_room.is_some() => {
+                    Some(AuthenticatedAction::ScrollMessagesUp)
+                }
+                KeyCode::Down if self.current_room.is_some() => {
+                    Some(AuthenticatedAction::ScrollMessagesDown)
+                }
+                KeyCode::Enter if self.create_room.is_some() => {
+                    Some(AuthenticatedAction::CreateNewRoom)
+                }
                 KeyCode::Enter if self.current_room.is_none() => self
                     .selected_room_index
                     .map(|s| AuthenticatedAction::EnterRoom),
 
-                KeyCode::Esc if self.current_room.is_some() => Some(AuthenticatedAction::ExitRoom),
                 KeyCode::Enter if self.current_room.is_some() => {
                     Some(AuthenticatedAction::SendMessage)
                 }
-
-                KeyCode::Up if self.current_room.is_some() => {
-                    Some(AuthenticatedAction::SelectPrevMessage)
+                KeyCode::Esc if self.create_room.is_some() => {
+                    Some(AuthenticatedAction::CancelNewRoom)
                 }
-                KeyCode::Down if self.current_room.is_some() => {
-                    Some(AuthenticatedAction::SelectNextMessage)
-                }
+                KeyCode::Esc if self.current_room.is_some() => Some(AuthenticatedAction::ExitRoom),
 
                 KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     Some(AuthenticatedAction::Signout)
+                }
+                KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    Some(AuthenticatedAction::StartCreatingRoom)
+                }
+
+                _ if self.create_room.is_some() => {
+                    try_handle_text_events(event).map(|e| AuthenticatedAction::CreateRoomName(e))
                 }
 
                 _ if self.current_room.is_some() => {
