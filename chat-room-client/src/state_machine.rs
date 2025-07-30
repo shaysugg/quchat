@@ -345,7 +345,7 @@ pub fn handle_action(
                     }
                     AuthenticatedAction::NewRoomIsCreated(res) => match res {
                         Ok(room) => {
-                            state.rooms.push(room);
+                            state.rooms.insert(0, room);
                             state.create_room = None;
                         }
                         Err(err) => app.error = Some(err.to_string()),

@@ -132,7 +132,7 @@ pub enum AuthenticatedAction {
 impl<'r> SignedOutState<'r> {
     pub fn new() -> Self {
         SignedOutState {
-            username_field: Textfield::new("username"),
+            username_field: Textfield::new_focused("username", true),
             password_field: Textfield::new("password"),
         }
     }
@@ -151,6 +151,15 @@ impl<'r> Textfield<'r> {
             label: label,
             text: String::new(),
             focused: false,
+            hint: "",
+        }
+    }
+
+    pub fn new_focused(label: &'r str, focuse: bool) -> Self {
+        Textfield {
+            label: label,
+            text: String::new(),
+            focused: focuse,
             hint: "",
         }
     }

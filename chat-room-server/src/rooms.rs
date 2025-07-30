@@ -87,7 +87,7 @@ fn remove_online_user(
 
 #[get("/")]
 async fn get_all(mut db: Connection<Db>) -> ApiResult<Vec<Room>> {
-    let rooms = sqlx::query_as!(Room, "SELECT * FROM rooms")
+    let rooms = sqlx::query_as!(Room, "SELECT * FROM rooms ORDER BY create_date DESC")
         .fetch(&mut **db)
         .try_collect::<Vec<_>>()
         .await;
