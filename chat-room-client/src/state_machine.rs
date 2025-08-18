@@ -1,10 +1,14 @@
 use anyhow::bail;
 use chat_room_client::Client;
-use std::{ops::Deref, sync::Arc};
-use tokio::{sync::mpsc::UnboundedSender, time::error};
+use futures::channel::mpsc::channel;
+use std::{collections::HashMap, ops::Deref, sync::Arc};
+use tokio::{
+    sync::mpsc::{unbounded_channel, UnboundedSender},
+    time::error,
+};
 
 use crate::{
-    chat_room_client::{self, Message},
+    chat_room_client::{self, Message, RoomState},
     state::{
         Action, App, AuthenticatedAction, AuthenticatedState, CreateRoomState, CurrentRoomState,
         SignedOutAction, SignedOutState, State, Textfield,
@@ -183,6 +187,9 @@ pub fn handle_action(
                             sideeffect
                                 .send(Action::Authenticated(AuthenticatedAction::SyncMessages))
                                 .unwrap();
+                            sideeffect
+                                .send(Action::Authenticated(AuthenticatedAction::MakeRoomAsSeen))
+                                .unwrap();
                         }
                     }
                     AuthenticatedAction::ExitRoom => {
@@ -225,7 +232,18 @@ pub fn handle_action(
                         });
                     }
                     AuthenticatedAction::RoomsLoaded(res) => match res {
-                        Ok(rooms) => state.rooms = rooms,
+                        Ok(rooms) => {
+                            state.rooms = rooms;
+                            sideeffect
+                                .send(Action::Authenticated(AuthenticatedAction::UpdateRoomStates))
+                                .unwrap();
+
+                            sideeffect
+                                .send(Action::Authenticated(
+                                    AuthenticatedAction::ListenForRoomStateChanges,
+                                ))
+                                .unwrap();
+                        }
                         Err(error) => app.error = Some(error.to_string()),
                     },
 
@@ -358,6 +376,98 @@ pub fn handle_action(
                     AuthenticatedAction::CancelNewRoom => {
                         if state.create_room.is_some() {
                             state.create_room = None
+                        }
+                    }
+                    AuthenticatedAction::ListenForRoomStateChanges => {
+                        let token = state.token.clone();
+                        let ids = state
+                            .rooms
+                            .iter()
+                            .map(|r| r.id.clone())
+                            .collect::<Vec<String>>();
+                        let sideeffect = sideeffect.clone();
+                        let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(10);
+                        tokio::spawn(async move {
+                            chat_room_client::room_states_events(
+                                &client,
+                                &token,
+                                ids.iter().map(|i| i.as_str()).collect::<Vec<&str>>(),
+                                tx.clone(),
+                            )
+                            .await;
+                        });
+                        tokio::spawn(async move {
+                            while let Some(_) = rx.recv().await {
+                                sideeffect
+                                    .send(Action::Authenticated(
+                                        AuthenticatedAction::UpdateRoomStates,
+                                    ))
+                                    .unwrap();
+                            }
+                        });
+                    }
+
+                    AuthenticatedAction::UpdateRoomStates => {
+                        let token = state.token.clone();
+                        let ids = state
+                            .rooms
+                            .iter()
+                            .map(|r| r.id.clone())
+                            .collect::<Vec<String>>();
+                        let sideeffect = sideeffect.clone();
+                        tokio::spawn(async move {
+                            // let ids = ids.into_iter().map(|i| i.as_str().clone()).collect::<Vec<&str>>();
+                            match chat_room_client::room_states(
+                                &client,
+                                &token,
+                                ids.iter().map(|i| i.as_str()).collect(),
+                            )
+                            .await
+                            {
+                                Ok(room_states) => {
+                                    let a = room_states
+                                        .into_iter()
+                                        .map(|i| (i.room_id.clone(), i))
+                                        .collect::<HashMap<String, RoomState>>();
+
+                                    sideeffect
+                                        .send(Action::Authenticated(
+                                            AuthenticatedAction::RoomStatesUpdated(Ok(a)),
+                                        ))
+                                        .unwrap();
+                                }
+                                Err(error) => {
+                                    sideeffect
+                                        .send(Action::Authenticated(
+                                            AuthenticatedAction::RoomStatesUpdated(Err(error)),
+                                        ))
+                                        .unwrap();
+                                }
+                            };
+                        });
+                    }
+
+                    AuthenticatedAction::RoomStatesUpdated(res) => match res {
+                        Ok(states) => {
+                            println!("{}", states.len());
+                            state.rooms_states = states
+                        }
+                        Err(error) => app.error = Some(error.to_string()),
+                    },
+
+                    AuthenticatedAction::MakeRoomAsSeen => {
+                        if let Some(ref current) = state.current_room {
+                            let token = state.token.clone();
+                            let room_id = current.id.clone();
+                            if let Some(rooms_states) = state.rooms_states.get_mut(&current.id) {
+                                rooms_states.has_unread = false;
+                            }
+
+                            tokio::spawn(async move {
+                                let _ =
+                                    chat_room_client::update_room_seen(&client, &token, &room_id)
+                                        .await;
+                            });
                         }
                     }
                 }

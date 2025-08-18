@@ -43,6 +43,12 @@ pub struct RegisterResponse {
     pub token: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RoomState {
+    pub room_id: String,
+    pub has_unread: bool,
+}
+
 #[derive(Deserialize)]
 enum BaseRes<T> {
     #[serde(rename = "data")]
@@ -254,6 +260,67 @@ pub async fn signout(client: &Client, token: &str) -> Result<()> {
     handle_result(result).map(|_| ())
 }
 
+pub async fn room_states(client: &Client, token: &str, ids: Vec<&str>) -> Result<Vec<RoomState>> {
+    let result = client
+        .inner
+        .get(URLs::room_states())
+        .query(&[("room_ids", ids.join(","))])
+        .bearer_auth(token)
+        .send()
+        .await
+        .map_err(|e| Error::from(e))
+        .inspect_err(|e| handle_unauthorized(e, client.unauthtorized_sender.clone()))?
+        .json::<BaseRes<Vec<RoomState>>>()
+        .await?;
+
+    handle_result(result)
+}
+
+pub async fn room_states_events(
+    client: &Client,
+    token: &str,
+    ids: Vec<&str>,
+    sender: tokio::sync::mpsc::Sender<()>,
+) {
+    let res = client
+        .inner
+        .get(URLs::room_states_events())
+        .query(&[("room_ids", ids.join(","))])
+        .bearer_auth(token)
+        .send()
+        .await
+        .unwrap();
+    let mut stream = res.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        if let Ok(chunk) = chunk {
+            match std::str::from_utf8(&chunk) {
+                Ok(s) => {
+                    if !(s.starts_with("data:")) {
+                        continue;
+                    }
+                    sender.send(()).await.unwrap();
+                }
+                Err(e) => println!("Error: {}", e),
+            };
+        }
+    }
+}
+
+pub async fn update_room_seen(client: &Client, token: &str, room_id: &str) -> Result<()> {
+    let result = client
+        .inner
+        .post(URLs::update_room_state(room_id))
+        .bearer_auth(token)
+        .send()
+        .await
+        .map_err(|e| Error::from(e))
+        .inspect_err(|e| handle_unauthorized(e, client.unauthtorized_sender.clone()))?
+        .json::<BaseRes<String>>()
+        .await?;
+
+    handle_result(result).map(|_| ())
+}
+
 fn handle_result<T>(res: BaseRes<T>) -> Result<T> {
     match res {
         BaseRes::Data(data) => Ok(data),
@@ -367,6 +434,18 @@ impl URLs {
 
     fn create_room() -> String {
         format!("{}/rooms", URLs::base())
+    }
+
+    fn room_states<'r>() -> String {
+        format!("{}/rooms/states/", URLs::base())
+    }
+
+    fn room_states_events() -> String {
+        format!("{}/rooms/states/events", URLs::base())
+    }
+
+    fn update_room_state(room_id: &str) -> String {
+        format!("{}/rooms/states/{}", URLs::base(), room_id)
     }
 }
 

@@ -1,9 +1,9 @@
-use crate::asciiart;
 use crate::chat_room_client::Message;
 use crate::state::{
     Action, App, AuthenticatedState, CreateRoomState, SignedOutAction, SignedOutState, State,
     TextFieldAction, Textfield,
 };
+use crate::{asciiart, state};
 use ratatui::layout::{Constraint, Flex, Layout, Margin, Offset};
 use ratatui::prelude::{Buffer, Rect};
 
@@ -264,8 +264,18 @@ impl<'r> AuthenticatedState<'r> {
         let items: Vec<ListItem> = self
             .rooms
             .iter()
-            .enumerate()
-            .map(|(i, room)| ListItem::from(room.name.clone()))
+            .map(|(room)| {
+                let mut text = room.name.clone();
+                if self
+                    .rooms_states
+                    .get(&room.id)
+                    .map(|r| r.has_unread)
+                    .unwrap_or(false)
+                {
+                    text.push('*');
+                };
+                ListItem::from(text)
+            })
             .collect();
 
         let highlight_style = match self.current_room {

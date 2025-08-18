@@ -21,9 +21,10 @@ struct Message {
     room_id: String,
     create_date: i64,
 }
+
 #[derive(Debug, Serialize, Clone)]
-struct RoomChange {
-    message: MessageResponse,
+struct RoomListChange {
+    room_id: String,
 }
 
 impl Identifiable for Message {
@@ -122,21 +123,16 @@ async fn events(
     }
 }
 
-#[derive(Debug, Serialize, Clone)]
-struct MessageResponse {
-    id: String,
-    content: String,
-    sender_id: String,
-    room_id: String,
-    create_date: i64,
-    sender_name: String,
-}
+// async fn unread(
+//     changes: &State<Sender<RoomChange>>,
+
+// )
 
 #[get("/<room_id>?<size>")]
 async fn messages(
     room_id: String,
     size: Option<u32>,
-    _user_id: UserId,
+    user_id: UserId,
     mut db: Connection<Db>,
 ) -> ApiResult<Vec<MessageResponse>> {
     let size = size.unwrap_or(20);
@@ -148,7 +144,7 @@ async fn messages(
         WHERE messages.room_id = ($1) ORDER BY create_date LIMIT ($2);
         "#
     )
-    .bind(room_id)
+    .bind(&room_id)
     .bind(size)
     .fetch_all(&mut **db)
     .await;

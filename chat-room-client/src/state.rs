@@ -1,7 +1,7 @@
-use std::thread::JoinHandle;
+use std::{collections::HashMap, thread::JoinHandle};
 
 use crate::{
-    chat_room_client::{self, Message, Room, UserProfile},
+    chat_room_client::{self, Message, Room, RoomState, UserProfile},
     render,
 };
 
@@ -20,6 +20,7 @@ pub enum State<'r> {
 pub struct AuthenticatedState<'r> {
     pub token: String,
     pub rooms: Vec<Room>,
+    pub rooms_states: std::collections::HashMap<String, RoomState>,
     pub current_room_index: Option<usize>,
     pub selected_room_index: Option<usize>,
     pub current_room: Option<CurrentRoomState<'r>>,
@@ -38,6 +39,7 @@ impl<'r> AuthenticatedState<'r> {
             current_room_index: None,
             profile: None,
             create_room: None,
+            rooms_states: HashMap::new(),
         }
     }
 }
@@ -127,6 +129,10 @@ pub enum AuthenticatedAction {
     CreateNewRoom,
     CancelNewRoom,
     NewRoomIsCreated(chat_room_client::Result<Room>),
+    ListenForRoomStateChanges,
+    UpdateRoomStates,
+    RoomStatesUpdated(chat_room_client::Result<HashMap<String, RoomState>>),
+    MakeRoomAsSeen,
 }
 
 impl<'r> SignedOutState<'r> {
@@ -228,6 +234,7 @@ impl<'r> AuthenticatedState<'r> {
             selected_room_index: Some(0),
             profile: None,
             create_room: None,
+            rooms_states: HashMap::new(),
         }
     }
 }

@@ -20,6 +20,13 @@ CREATE TABLE IF NOT EXISTS messages (
     create_date INT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS room_state (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    room_id TEXT NOT NULL,
+    last_seen INT
+);
+
 CREATE TABLE IF NOT EXISTS token_blacklist (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     token TEXT NOT NULL
