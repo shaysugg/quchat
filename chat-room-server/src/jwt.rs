@@ -1,9 +1,9 @@
 use base64::{prelude::BASE64_STANDARD, Engine};
-use chrono::{Months, Utc};
+use chrono::Months;
 use hmac::{Hmac, Mac};
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 
 #[derive(Serialize, Deserialize)]
 pub struct Body {
@@ -51,8 +51,8 @@ pub fn generate_jwt(user_id: &str, secret_key: &[u8]) -> Result<String, TokenErr
         typ: "JWT",
     };
 
-    let header = rocket::serde::json::to_string(&header).map_err(|e| TokenError::JsonDecode)?;
-    let body = rocket::serde::json::to_string(&body).map_err(|e| TokenError::JsonDecode)?;
+    let header = rocket::serde::json::to_string(&header).map_err(|_| TokenError::JsonDecode)?;
+    let body = rocket::serde::json::to_string(&body).map_err(|_| TokenError::JsonDecode)?;
 
     let header = BASE64_STANDARD.encode(header);
     let body = BASE64_STANDARD.encode(body);
@@ -76,12 +76,12 @@ pub fn validate_jwt(token: &str, secret_key: &[u8]) -> Result<Body, TokenError> 
 
     let header = BASE64_STANDARD
         .decode(header)
-        .map_err(|e| TokenError::Base64Encode)?;
+        .map_err(|_| TokenError::Base64Encode)?;
     let body = BASE64_STANDARD
         .decode(body)
-        .map_err(|e| TokenError::Base64Encode)?;
+        .map_err(|_| TokenError::Base64Encode)?;
 
-    let header: Header =
+    let _header: Header =
         rocket::serde::json::from_slice(&header).map_err(|_| TokenError::JsonEncode)?;
     let body: Body = rocket::serde::json::from_slice(&body).map_err(|_| TokenError::JsonEncode)?;
 
@@ -98,7 +98,7 @@ pub fn validate_jwt(token: &str, secret_key: &[u8]) -> Result<Body, TokenError> 
 
 fn hmac_256_sign(secret_key: &[u8], data: &[u8]) -> Result<String, TokenError> {
     let mut mac =
-        Hmac::<Sha256>::new_from_slice(secret_key).map_err(|e| TokenError::HmacCreation)?;
+        Hmac::<Sha256>::new_from_slice(secret_key).map_err(|_| TokenError::HmacCreation)?;
     mac.update(data);
     let sign = mac.finalize().into_bytes();
     Ok(BASE64_STANDARD.encode(sign))

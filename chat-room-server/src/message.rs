@@ -1,7 +1,5 @@
-use chrono::Utc;
 use rocket::{
     fairing::AdHoc,
-    http::Status,
     response::stream::{Event, EventStream},
     serde::json::Json,
     tokio::sync::broadcast::{channel, error::RecvError, Sender},
@@ -23,7 +21,9 @@ struct Message {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[allow(dead_code)]
 struct RoomListChange {
+    state_id: u128,
     room_id: String,
 }
 
@@ -132,7 +132,7 @@ async fn events(
 async fn messages(
     room_id: String,
     size: Option<u32>,
-    user_id: UserId,
+    _user_id: UserId,
     mut db: Connection<Db>,
 ) -> ApiResult<Vec<MessageResponse>> {
     let size = size.unwrap_or(20);

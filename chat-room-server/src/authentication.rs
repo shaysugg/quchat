@@ -1,6 +1,11 @@
-use base64::{prelude::BASE64_STANDARD, Engine};
-use hmac::{Hmac, Mac};
-use rocket::execute;
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(unused_assignments)]
+#![allow(unused_mut)]
+#![allow(unused_macros)]
+#![allow(unused_results)]
+#![allow(unreachable_code)]
 use rocket::fairing::AdHoc;
 use rocket::http::Status;
 
@@ -15,7 +20,7 @@ use crate::base::{ApiResult, ApiResultBuilder, Db};
 use crate::jwt::*;
 use crate::user::User;
 
-static secret_key_mine: &[u8] = b"hello";
+static SECRET_KEY_MINE: &[u8] = b"hello";
 
 pub struct UserId {
     pub id: String,
@@ -74,7 +79,7 @@ impl<'r> FromRequest<'r> for UserId {
             Err(err) => return Outcome::Error((Status::Unauthorized, err)),
         };
 
-        match validate_jwt(&token, secret_key_mine) {
+        match validate_jwt(&token, SECRET_KEY_MINE) {
             Ok(body) => Outcome::Success(UserId {
                 id: body.user_id.to_string(),
                 token: token,
@@ -113,7 +118,7 @@ async fn register(
     //TODO: if user exists
 
     match insert_result {
-        Ok(_) => match generate_jwt(&id, secret_key_mine) {
+        Ok(_) => match generate_jwt(&id, SECRET_KEY_MINE) {
             Ok(token) => ApiResultBuilder::data(RegisterResponse { token }),
             Err(_) => ApiResultBuilder::err("Unable to create token"),
         },
@@ -175,17 +180,17 @@ async fn signin(mut db: Connection<Db>, params: Json<SigninParams>) -> ApiResult
     .fetch_one(&mut **db)
     .await;
 
-    let mut user: User;
+    let user: User;
     match res {
         Ok(usr) => user = usr,
-        Err(err) => return ApiResultBuilder::err("User not found"),
+        Err(_) => return ApiResultBuilder::err("User not found"),
     };
 
     if hash(&params.password) != user.secret {
         return ApiResultBuilder::err("Invalid password");
     };
 
-    let token_res = generate_jwt(&user.id, secret_key_mine);
+    let token_res = generate_jwt(&user.id, SECRET_KEY_MINE);
 
     match token_res {
         Ok(token) => ApiResultBuilder::data(SigninResponse { token }),

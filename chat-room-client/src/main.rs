@@ -1,7 +1,5 @@
-use state::{Action, App, AuthenticatedState, SignedOutState, State};
-use std::{ops::Deref, sync::Arc};
-
-use crate::state::AuthenticatedAction;
+use state::{Action, App, SignedOutState, State};
+use std::sync::Arc;
 
 pub mod asciiart;
 pub mod chat_room_client;

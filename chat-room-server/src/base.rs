@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use rocket::response::{self, Responder, Response};
+use rocket::response::Responder;
 use rocket::serde::json::Json;
 use serde::Serialize;
 

@@ -1,7 +1,4 @@
-use ratatui::{
-    crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
-    style::Modifier,
-};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 use crate::state::*;
 
@@ -96,7 +93,7 @@ impl<'r> AuthenticatedState<'r> {
                 }
                 KeyCode::Enter if self.current_room.is_none() => self
                     .selected_room_index
-                    .map(|s| AuthenticatedAction::EnterRoom),
+                    .map(|_| AuthenticatedAction::EnterRoom),
 
                 KeyCode::Enter if self.current_room.is_some() => {
                     Some(AuthenticatedAction::SendMessage)

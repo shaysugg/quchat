@@ -1,15 +1,12 @@
+use crate::asciiart;
 use crate::chat_room_client::Message;
-use crate::state::{
-    Action, App, AuthenticatedState, CreateRoomState, SignedOutAction, SignedOutState, State,
-    TextFieldAction, Textfield,
-};
-use crate::{asciiart, state};
-use ratatui::layout::{Constraint, Flex, Layout, Margin, Offset};
+use crate::state::{App, AuthenticatedState, CreateRoomState, SignedOutState, State, Textfield};
+use ratatui::layout::{Constraint, Flex, Layout};
 use ratatui::prelude::{Buffer, Rect};
 
-use ratatui::style::{Color, Modifier, Style, Stylize};
+use ratatui::style::{Color, Style, Stylize};
 
-use ratatui::symbols::{block, border};
+use ratatui::symbols::border;
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::ListItem;
 use ratatui::widgets::{
@@ -133,7 +130,7 @@ trait Instructable<'r> {
 impl<'r> Instructable<'r> for State<'r> {
     fn instructions(&self) -> Vec<Instructions<'static>> {
         match self {
-            State::SignedOut(s) => vec![
+            State::SignedOut(_) => vec![
                 Instructions {
                     name: "Register",
                     key: "^r",
@@ -188,7 +185,6 @@ impl<'r> Instructable<'r> for State<'r> {
                     ]
                 }
             }
-            _ => Vec::new(),
         }
     }
 }
@@ -264,7 +260,7 @@ impl<'r> AuthenticatedState<'r> {
         let items: Vec<ListItem> = self
             .rooms
             .iter()
-            .map(|(room)| {
+            .map(|room| {
                 let mut text = room.name.clone();
                 if self
                     .rooms_states

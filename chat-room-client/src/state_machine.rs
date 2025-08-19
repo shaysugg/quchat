@@ -1,11 +1,7 @@
 use anyhow::bail;
 use chat_room_client::Client;
-use futures::channel::mpsc::channel;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
-use tokio::{
-    sync::mpsc::{unbounded_channel, UnboundedSender},
-    time::error,
-};
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     chat_room_client::{self, Message, RoomState},

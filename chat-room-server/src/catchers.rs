@@ -1,6 +1,6 @@
 use rocket::{fairing::AdHoc, serde::json::Json};
 
-use crate::base::{ApiResult, ApiResultBuilder, Error, SimpleError};
+use crate::base::{ApiResult, Error, SimpleError};
 
 #[catch(401)]
 pub fn unauthorized() -> ApiResult<()> {

@@ -1,9 +1,6 @@
-use std::{collections::HashMap, thread::JoinHandle};
+use std::collections::HashMap;
 
-use crate::{
-    chat_room_client::{self, Message, Room, RoomState, UserProfile},
-    render,
-};
+use crate::chat_room_client::{self, Message, Room, RoomState, UserProfile};
 
 pub struct App {
     pub state: State<'static>,

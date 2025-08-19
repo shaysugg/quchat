@@ -1,28 +1,20 @@
-use std::clone;
-use std::str::FromStr;
-
 use chrono::Utc;
 use rocket::fairing::AdHoc;
-use rocket::futures::{TryFutureExt, TryStreamExt};
+use rocket::futures::TryStreamExt;
 use rocket::http::Status;
 use rocket::response::stream::{Event, EventStream};
 use rocket::serde::json::Json;
-
+use rocket::tokio::sync::broadcast::{error::RecvError, Sender};
 use rocket::{Shutdown, State};
+use rocket_db_pools::Connection;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::HashMap;
+use std::str::FromStr;
 
-use rocket::tokio::sync::broadcast::{channel, error::RecvError, Sender};
-
-use rocket_db_pools::Connection;
-use sqlx::Execute;
-
+use crate::authentication::UserId;
 use crate::base::{ApiResult, ApiResultBuilder, RoomChange};
-use crate::{
-    authentication::UserId,
-    base::{Db, Error, Identifiable, Rx, Tx},
-};
+use crate::base::{Db, Identifiable, Rx, Tx};
 
 #[derive(Serialize)]
 pub struct RoomsStatus {
@@ -286,7 +278,7 @@ pub async fn update_room_state(
     //check if result has item
     let state = match result {
         Ok(res) => res,
-        Err(error) => return ApiResultBuilder::err("Unable to set state"),
+        Err(_error) => return ApiResultBuilder::err("Unable to set state"),
     };
 
     let now = chrono::Utc::now().timestamp();

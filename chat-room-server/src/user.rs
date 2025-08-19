@@ -1,13 +1,8 @@
+use crate::base::{ApiResult, Db, Identifiable};
 use crate::{authentication::UserId, base::ApiResultBuilder};
-use rocket::{
-    fairing::AdHoc,
-    futures::{FutureExt, TryFutureExt},
-    serde::json::Json,
-};
+use rocket::fairing::AdHoc;
 use rocket_db_pools::Connection;
 use serde::Serialize;
-
-use crate::base::{ApiResult, BaseRes, Db, Error, Identifiable};
 
 #[derive(Serialize)]
 pub struct User {
