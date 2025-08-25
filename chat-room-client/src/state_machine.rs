@@ -1,10 +1,11 @@
 use anyhow::bail;
 use chat_room_client::Client;
+use qu_chat_models::{Message, RoomState};
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
-    chat_room_client::{self, Message, RoomState},
+    chat_room_client::{self},
     state::{
         Action, App, AuthenticatedAction, AuthenticatedState, CreateRoomState, CurrentRoomState,
         SignedOutAction, SignedOutState, State, Textfield,
@@ -221,9 +222,7 @@ pub fn handle_action(
                         let token = state.token.clone();
                         let tx = sideeffect.clone();
                         tokio::spawn(async move {
-                            let res = chat_room_client::rooms(client.deref(), &token)
-                                .await
-                                .map(|r| r.rooms);
+                            let res = chat_room_client::rooms(client.deref(), &token).await;
                             tx.send(Action::Authenticated(AuthenticatedAction::RoomsLoaded(res)))
                         });
                     }
@@ -343,7 +342,7 @@ pub fn handle_action(
                         if let Some(ref mut create_room) = state.create_room {
                             let token = state.token.clone();
                             let sideeffect = sideeffect.clone();
-                            let params = chat_room_client::CreateRoomParam {
+                            let params = qu_chat_models::CreateRoomParam {
                                 name: create_room.name_field.text.clone(),
                             };
                             tokio::spawn(async move {
@@ -444,10 +443,7 @@ pub fn handle_action(
                     }
 
                     AuthenticatedAction::RoomStatesUpdated(res) => match res {
-                        Ok(states) => {
-                            println!("{}", states.len());
-                            state.rooms_states = states
-                        }
+                        Ok(states) => state.rooms_states = states,
                         Err(error) => app.error = Some(error.to_string()),
                     },
 

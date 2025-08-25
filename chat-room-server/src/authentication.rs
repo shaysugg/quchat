@@ -6,6 +6,7 @@
 #![allow(unused_macros)]
 #![allow(unused_results)]
 #![allow(unreachable_code)]
+use qu_chat_models::{RegisterParams, RegisterResponse, SignInParams, SignInResponse};
 use rocket::fairing::AdHoc;
 use rocket::http::Status;
 
@@ -89,18 +90,8 @@ impl<'r> FromRequest<'r> for UserId {
     }
 }
 
-#[derive(Deserialize)]
-struct RegisterParams {
-    username: String,
-    password: String,
-}
-#[derive(Serialize)]
-struct RegisterResponse {
-    token: String,
-}
-
 #[post("/register", data = "<param>")]
-async fn register(
+async fn register<'r>(
     mut db: Connection<Db>,
     param: Json<RegisterParams>,
 ) -> ApiResult<RegisterResponse> {
@@ -119,13 +110,10 @@ async fn register(
 
     match insert_result {
         Ok(_) => match generate_jwt(&id, SECRET_KEY_MINE) {
-            Ok(token) => ApiResultBuilder::data(RegisterResponse { token }),
+            Ok(token) => ApiResultBuilder::data(RegisterResponse { token: token }),
             Err(_) => ApiResultBuilder::err("Unable to create token"),
         },
-        Err(err) => {
-            println!("{}", err);
-            ApiResultBuilder::err("Unable to create user {:?}")
-        }
+        Err(err) => ApiResultBuilder::err("Unable to create user {:?}"),
     }
 }
 
@@ -148,8 +136,6 @@ pub async fn check_token_expired(
     .await
     .map_err(|e| ApiKeyError::Db)?;
 
-    println!("{:?}", res);
-
     match res {
         Some(_) => Err(ApiKeyError::Expired),
         None => Ok(token.to_string()),
@@ -160,18 +146,8 @@ fn hash(str: &str) -> String {
     hex::encode(Sha256::digest(&str).to_ascii_lowercase())
 }
 
-#[derive(Deserialize)]
-struct SigninParams {
-    username: String,
-    password: String,
-}
-#[derive(Serialize)]
-struct SigninResponse {
-    token: String,
-}
-
 #[post("/signin", data = "<params>")]
-async fn signin(mut db: Connection<Db>, params: Json<SigninParams>) -> ApiResult<SigninResponse> {
+async fn signin(mut db: Connection<Db>, params: Json<SignInParams>) -> ApiResult<SignInResponse> {
     let res = sqlx::query_as!(
         User,
         "SELECT * FROM users WHERE name = ($1)",
@@ -193,7 +169,7 @@ async fn signin(mut db: Connection<Db>, params: Json<SigninParams>) -> ApiResult
     let token_res = generate_jwt(&user.id, SECRET_KEY_MINE);
 
     match token_res {
-        Ok(token) => ApiResultBuilder::data(SigninResponse { token }),
+        Ok(token) => ApiResultBuilder::data(SignInResponse { token }),
         Err(_) => ApiResultBuilder::err("Unable to create token"),
     }
 }

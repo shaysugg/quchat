@@ -1,4 +1,5 @@
 use chrono::Utc;
+use qu_chat_models::{CreateRoomParam, Room, RoomState};
 use rocket::fairing::AdHoc;
 use rocket::futures::TryStreamExt;
 use rocket::http::Status;
@@ -10,11 +11,10 @@ use rocket_db_pools::Connection;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::HashMap;
-use std::str::FromStr;
 
 use crate::authentication::UserId;
 use crate::base::{ApiResult, ApiResultBuilder, RoomChange};
-use crate::base::{Db, Identifiable, Rx, Tx};
+use crate::base::{Db, Rx, Tx};
 
 #[derive(Serialize)]
 pub struct RoomsStatus {
@@ -27,36 +27,6 @@ impl RoomsStatus {
             online_users: Vec::new(),
         }
     }
-}
-
-#[derive(Serialize)]
-pub struct Room {
-    id: String,
-    name: String,
-    creator_id: String,
-    create_date: i64,
-}
-impl Room {
-    pub fn uuid(&self) -> uuid::Uuid {
-        uuid::Uuid::from_str(&self.id).unwrap()
-    }
-}
-
-impl Identifiable for Room {
-    fn id(&self) -> &str {
-        self.id.as_str()
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct RoomState {
-    room_id: String,
-    has_unread: bool,
-}
-
-#[derive(Deserialize)]
-struct CreateRoomParam {
-    name: String,
 }
 
 #[get("/status")]
@@ -159,7 +129,6 @@ async fn state_events(
                      match change {
 
                     Ok(change) if room_ids.contains(&change.message.room_id) => {
-                        println!("change2 {:?}",change);
                         change
                     }
                     Ok(_) => continue,
@@ -205,9 +174,6 @@ async fn rooms_state(
                 .collect::<HashMap<String, Option<i32>>>()
         });
 
-    println!("last seen {:?}", last_seen_res);
-    println!("last seen {:?}", last_seen_res);
-
     let query = format!(
         "SELECT room_id, MAX(create_date) FROM messages WHERE room_id IN ({}) AND sender_id != (?) GROUP BY room_id",
         placeholders
@@ -225,8 +191,6 @@ async fn rooms_state(
                 .map(|row| (row.get(0), row.get(1)))
                 .collect::<HashMap<String, i32>>()
         });
-
-    println!("last message {:?}", last_message_result);
 
     let mut states = Vec::new();
 

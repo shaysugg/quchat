@@ -1,6 +1,6 @@
 use crate::asciiart;
-use crate::chat_room_client::Message;
 use crate::state::{App, AuthenticatedState, CreateRoomState, SignedOutState, State, Textfield};
+use qu_chat_models::Message;
 use ratatui::layout::{Constraint, Flex, Layout};
 use ratatui::prelude::{Buffer, Rect};
 
@@ -404,9 +404,9 @@ fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
     area
 }
 
-fn pretty_date(timestamp: i32) -> String {
+fn pretty_date(timestamp: i64) -> String {
     let utc: chrono::DateTime<chrono::Utc> =
-        chrono::DateTime::from_timestamp(timestamp as i64, 0).unwrap();
+        chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
     let local: chrono::DateTime<chrono::Local> = utc.with_timezone(&chrono::Local);
     local.format("%m-%d %H:%M").to_string()
 }

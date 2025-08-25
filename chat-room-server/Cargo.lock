@@ -228,6 +228,7 @@ dependencies = [
  "flume 0.10.14",
  "hex",
  "hmac",
+ "qu-chat-models",
  "rocket",
  "rocket_db_pools",
  "serde",
@@ -1460,6 +1461,15 @@ dependencies = [
  "syn 2.0.100",
  "version_check",
  "yansi",
+]
+
+[[package]]
+name = "qu-chat-models"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]

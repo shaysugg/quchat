@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::chat_room_client::{self, Message, Room, RoomState, UserProfile};
+use qu_chat_models::{Message, Room, RoomState, UserProfile};
+
+use crate::chat_room_client;
 
 pub struct App {
     pub state: State<'static>,
@@ -198,6 +200,7 @@ impl<'r> AuthenticatedState<'r> {
                 id: name.to_string(),
                 name: name.to_string(),
                 create_date: 0,
+                creator_id: "".to_string(),
             })
             .collect::<Vec<Room>>();
 

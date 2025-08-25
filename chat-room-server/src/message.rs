@@ -1,3 +1,4 @@
+use qu_chat_models::{Message, SendMessageParams};
 use rocket::{
     fairing::AdHoc,
     response::stream::{Event, EventStream},
@@ -12,7 +13,7 @@ use sqlx::Row;
 use crate::{authentication::UserId, base::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-struct Message {
+struct MessageDM {
     id: String,
     content: String,
     sender_id: String,
@@ -27,20 +28,9 @@ struct RoomListChange {
     room_id: String,
 }
 
-impl Identifiable for Message {
-    fn id(&self) -> &str {
-        &self.id
-    }
-}
-#[derive(Debug, Clone, Deserialize)]
-struct SendParams<'r> {
-    text: &'r str,
-    room_id: String,
-}
-
 #[post("/send", data = "<params>")]
-async fn send<'r>(
-    params: Json<SendParams<'r>>,
+async fn send(
+    params: Json<SendMessageParams>,
     changes: &State<Sender<RoomChange>>,
     user_id: UserId,
     mut db: Connection<Db>,
@@ -49,11 +39,11 @@ async fn send<'r>(
         .fetch_one(&mut **db)
         .await;
 
-    let message = Message {
+    let message = MessageDM {
         id: uuid::Uuid::new_v4().to_string(),
         content: params.text.to_string(),
         sender_id: user_id.id,
-        room_id: params.room_id.clone(),
+        room_id: params.room_id.to_string(),
         create_date: chrono::Utc::now().timestamp(),
     };
 
@@ -82,7 +72,7 @@ async fn send<'r>(
     };
 
     let change = RoomChange {
-        message: MessageResponse {
+        message: Message {
             id: message.id,
             content: message.content,
             sender_id: sender_id,
@@ -134,7 +124,7 @@ async fn messages(
     size: Option<u32>,
     _user_id: UserId,
     mut db: Connection<Db>,
-) -> ApiResult<Vec<MessageResponse>> {
+) -> ApiResult<Vec<Message>> {
     let size = size.unwrap_or(20);
     let rows = sqlx::query(
         r#"
@@ -152,7 +142,7 @@ async fn messages(
     let result = match rows {
         Ok(ref a) => Ok(a
             .iter()
-            .map(|b| MessageResponse {
+            .map(|b| Message {
                 id: b.get(0),
                 content: b.get(1),
                 sender_id: b.get(3),
@@ -160,7 +150,7 @@ async fn messages(
                 create_date: b.get(4),
                 sender_name: b.get(5),
             })
-            .collect::<Vec<MessageResponse>>()),
+            .collect::<Vec<Message>>()),
         Err(e) => Err(e),
     };
 

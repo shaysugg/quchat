@@ -1,5 +1,4 @@
-use std::str::FromStr;
-
+use qu_chat_models::Message;
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use serde::Serialize;
@@ -56,24 +55,7 @@ impl<'r> Error<'r> {
     }
 }
 
-pub trait Identifiable {
-    fn id(&self) -> &str;
-    fn uuid(&self) -> uuid::Uuid {
-        uuid::Uuid::from_str(&self.id()).unwrap()
-    }
-}
-
 #[derive(Debug, Serialize, Clone)]
 pub struct RoomChange {
-    pub message: MessageResponse,
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct MessageResponse {
-    pub id: String,
-    pub content: String,
-    pub sender_id: String,
-    pub room_id: String,
-    pub create_date: i64,
-    pub sender_name: String,
+    pub message: Message,
 }

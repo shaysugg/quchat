@@ -25,7 +25,12 @@
     [x] guard database for token validation https://api.rocket.rs/master/rocket/request/trait.FromRequest
     [X] - auth key management
     [ ] - security check
-    [ ] - share entites by a library
+    [X] - share entites by a library
     [ ] - folder structures
     [ ] - 404 not working??
-    [ ] - warnings[]
+    [X] - warnings[]
+
+
+## Final
+[] final test
+[] share + promotion

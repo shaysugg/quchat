@@ -1,5 +1,6 @@
-use crate::base::{ApiResult, Db, Identifiable};
+use crate::base::{ApiResult, Db};
 use crate::{authentication::UserId, base::ApiResultBuilder};
+use qu_chat_models::{Identifiable, UserProfile};
 use rocket::fairing::AdHoc;
 use rocket_db_pools::Connection;
 use serde::Serialize;
@@ -9,12 +10,6 @@ pub struct User {
     pub id: String,
     pub name: String,
     pub secret: String,
-}
-
-#[derive(Serialize)]
-pub struct UserProfile {
-    pub id: String,
-    pub name: String,
 }
 
 impl Identifiable for User {

@@ -1,62 +1,19 @@
 use futures::StreamExt;
-use serde::{Deserialize, Serialize};
+use qu_chat_models::{
+    CreateRoomParam, Message, RegisterParams, RegisterResponse, Room, RoomState, SendMessageParams,
+    SignInParams, SignInResponse, UserProfile,
+};
+use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
-pub struct Room {
-    pub id: String,
-    pub name: String,
-    pub create_date: i32,
-}
-#[derive(Deserialize, Debug)]
-pub struct Message {
-    pub id: String,
-    pub content: String,
-    pub sender_id: String,
-    pub room_id: String,
-    pub create_date: i32,
-    pub sender_name: String,
-}
-
-pub struct User {
-    pub id: String,
-    pub name: String,
-    pub token: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct UserProfile {
-    pub id: String,
-    pub name: String,
-}
-
-#[derive(Debug, Serialize)]
-struct RegisterBody<'r> {
+pub async fn register<'r>(
+    client: &Client,
     username: &'r str,
     password: &'r str,
-}
-
-#[derive(Deserialize)]
-pub struct RegisterResponse {
-    pub token: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RoomState {
-    pub room_id: String,
-    pub has_unread: bool,
-}
-
-#[derive(Deserialize)]
-enum BaseRes<T> {
-    #[serde(rename = "data")]
-    Data(T),
-    //TODO: temp
-    #[serde(rename = "msg")]
-    Error(String),
-}
-
-pub async fn register(client: &Client, username: &str, password: &str) -> Result<RegisterResponse> {
-    let body = RegisterBody { username, password };
+) -> Result<RegisterResponse> {
+    let body = RegisterParams {
+        username: username.to_string(),
+        password: password.to_string(),
+    };
     let response = client
         .inner
         .post(URLs::register())
@@ -86,19 +43,11 @@ pub async fn whoami(client: &Client, token: &str) -> Result<UserProfile> {
     handle_result(response)
 }
 
-#[derive(Debug, Serialize)]
-struct SignInBody<'r> {
-    username: &'r str,
-    password: &'r str,
-}
-
-#[derive(Deserialize)]
-pub struct SignInResponse {
-    pub token: String,
-}
-
 pub async fn sigin(client: &Client, username: &str, password: &str) -> Result<SignInResponse> {
-    let body = SignInBody { username, password };
+    let body = SignInParams {
+        username: username.to_string(),
+        password: password.to_string(),
+    };
     let response = client
         .inner
         .post(URLs::signin())
@@ -113,12 +62,7 @@ pub async fn sigin(client: &Client, username: &str, password: &str) -> Result<Si
     // Ok(response)
 }
 
-#[derive(Deserialize)]
-pub struct GetRoomsResponse {
-    pub rooms: Vec<Room>,
-}
-
-pub async fn rooms(client: &Client, token: &str) -> Result<GetRoomsResponse> {
+pub async fn rooms(client: &Client, token: &str) -> Result<Vec<Room>> {
     let response = client
         .inner
         .get(URLs::rooms())
@@ -130,12 +74,7 @@ pub async fn rooms(client: &Client, token: &str) -> Result<GetRoomsResponse> {
         .json::<BaseRes<Vec<Room>>>()
         .await?;
 
-    handle_result(response).map(|r| GetRoomsResponse { rooms: r })
-}
-
-#[derive(Serialize)]
-pub struct CreateRoomParam {
-    pub name: String,
+    handle_result(response)
 }
 
 pub async fn create_room(client: &Client, params: &CreateRoomParam, token: &str) -> Result<Room> {
@@ -154,12 +93,6 @@ pub async fn create_room(client: &Client, params: &CreateRoomParam, token: &str)
     handle_result(response)
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct SendMessageParams<'r> {
-    text: &'r str,
-    room_id: &'r str,
-}
-
 pub async fn send_message(
     client: &Client,
     token: &str,
@@ -167,8 +100,8 @@ pub async fn send_message(
     room_id: &str,
 ) -> Result<()> {
     let body = SendMessageParams {
-        text: message,
-        room_id,
+        text: message.to_string(),
+        room_id: room_id.to_string(),
     };
     let response = client
         .inner
@@ -214,7 +147,6 @@ pub async fn messages<'r>(
                     //remove the initial data:
                     let mut string = String::from(s);
                     let string = string.split_off(5);
-                    // println!("String {}", string);
                     let message: Result<Message, serde_json::Error> = serde_json::from_str(&string);
                     match message {
                         Ok(msg) => sender.send(msg).await.unwrap(),
@@ -332,6 +264,21 @@ fn handle_unauthorized(error: &Error, sender: tokio::sync::mpsc::UnboundedSender
         }
         _ => (),
     };
+}
+
+pub struct User {
+    pub id: String,
+    pub name: String,
+    pub token: String,
+}
+
+#[derive(Deserialize)]
+enum BaseRes<T> {
+    #[serde(rename = "data")]
+    Data(T),
+    //TODO: temp
+    #[serde(rename = "msg")]
+    Error(String),
 }
 
 pub type Result<T> = std::result::Result<T, self::Error>;
