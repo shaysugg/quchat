@@ -91,10 +91,12 @@ impl<'r> Widget for &SignedOutState<'r> {
             Constraint::Fill(1),
             Constraint::Length(3),
             Constraint::Length(3),
+            Constraint::Length(3),
         ]);
 
-        let [welcome_area, username_are, password_area] = layout.areas(area);
+        let [welcome_area, server_field_area, username_are, password_area] = layout.areas(area);
 
+        self.server_field.render(server_field_area, buf);
         self.username_field.render(username_are, buf);
         self.password_field.render(password_area, buf);
 

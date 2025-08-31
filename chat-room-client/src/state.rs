@@ -11,6 +11,17 @@ pub struct App {
     pub should_close: bool,
 }
 
+impl App {
+    pub fn initial() -> Self {
+        App {
+            state: State::SignedOut(SignedOutState::new()),
+            error: None,
+            loading: false,
+            should_close: false,
+        }
+    }
+}
+
 pub enum State<'r> {
     Authenticated(AuthenticatedState<'r>),
     SignedOut(SignedOutState<'r>),
@@ -79,6 +90,7 @@ impl CreateRoomState<'_> {
 }
 
 pub struct SignedOutState<'r> {
+    pub server_field: Textfield<'r>,
     pub username_field: Textfield<'r>,
     pub password_field: Textfield<'r>,
 }
@@ -137,7 +149,8 @@ pub enum AuthenticatedAction {
 impl<'r> SignedOutState<'r> {
     pub fn new() -> Self {
         SignedOutState {
-            username_field: Textfield::new_focused("username", true),
+            server_field: Textfield::new_focused("server", true),
+            username_field: Textfield::new("username"),
             password_field: Textfield::new("password"),
         }
     }

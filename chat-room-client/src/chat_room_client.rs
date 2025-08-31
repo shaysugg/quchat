@@ -5,6 +5,8 @@ use qu_chat_models::{
 };
 use serde::Deserialize;
 
+use crate::data_files;
+
 pub async fn register<'r>(
     client: &Client,
     username: &'r str,
@@ -341,7 +343,8 @@ struct URLs;
 
 impl URLs {
     fn base() -> String {
-        String::from("http://127.0.0.1:8000")
+        let url = read_base_url().expect("base url is not configed");
+        String::from(url)
     }
 
     fn register() -> String {
@@ -391,6 +394,14 @@ impl URLs {
     fn update_room_state(room_id: &str) -> String {
         format!("{}/rooms/states/{}", URLs::base(), room_id)
     }
+}
+
+pub fn wite_base_url(base: &str) {
+    std::fs::write(data_files::path().join("base-url"), base).unwrap();
+}
+
+pub fn read_base_url() -> Option<String> {
+    std::fs::read_to_string(data_files::path().join("base-url")).ok()
 }
 
 #[cfg(test)]

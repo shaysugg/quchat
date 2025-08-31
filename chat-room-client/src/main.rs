@@ -1,8 +1,9 @@
-use state::{Action, App, SignedOutState, State};
+use state::{Action, App};
 use std::sync::Arc;
 
 pub mod asciiart;
 pub mod chat_room_client;
+pub mod data_files;
 pub mod events;
 pub mod render;
 pub mod state;
@@ -12,6 +13,7 @@ pub mod state_machine;
 
 #[tokio::main]
 async fn main() {
+    data_files::create_dir_if_needed().expect("Can't create data files");
     let client_builder = reqwest::ClientBuilder::new();
     let reqwest_client = client_builder
         .build()
@@ -50,18 +52,16 @@ fn start_app(
     client: Arc<chat_room_client::Client>,
     sideeffect: &tokio::sync::mpsc::UnboundedSender<Action>,
 ) -> App {
-    let mut app = App {
-        state: State::SignedOut(SignedOutState::new()),
-        error: None,
-        loading: false,
-        should_close: false,
-    };
+    let mut app = App::initial();
 
     match token::read_token() {
         Some(token) => {
             state_machine::new_authenticate(&mut app, token, client, sideeffect);
             app
         }
-        None => app,
+        None => {
+            state_machine::new_signout(&mut app);
+            app
+        }
     }
 }

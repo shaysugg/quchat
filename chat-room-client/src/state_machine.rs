@@ -41,6 +41,7 @@ pub fn handle_action(
         Action::SigneOut(signed_out_action) => match signed_out_action {
             SignedOutAction::Signin => {
                 if let State::SignedOut(ref state) = app.state {
+                    chat_room_client::wite_base_url(&state.server_field.text);
                     let username = state.username_field.text.clone();
                     let password = state.password_field.text.clone();
                     let tx = sideeffect.clone();
@@ -60,6 +61,7 @@ pub fn handle_action(
             }
             SignedOutAction::Register => {
                 if let State::SignedOut(ref state) = app.state {
+                    chat_room_client::wite_base_url(&state.server_field.text);
                     let username = state.username_field.text.clone();
                     let password = state.password_field.text.clone();
                     let tx = sideeffect.clone();
@@ -79,7 +81,9 @@ pub fn handle_action(
             }
             SignedOutAction::Text(text_action) => {
                 if let State::SignedOut(ref mut state) = app.state {
-                    if state.username_field.focused {
+                    if state.server_field.focused {
+                        state.server_field.handle_action(&text_action);
+                    } else if state.username_field.focused {
                         state.username_field.handle_action(&text_action);
                     } else if state.password_field.focused {
                         state.password_field.handle_action(&text_action);
@@ -88,11 +92,17 @@ pub fn handle_action(
             }
             SignedOutAction::NextFocus => {
                 if let State::SignedOut(ref mut state) = app.state {
-                    if state.username_field.focused {
+                    if state.server_field.focused {
+                        state.server_field.focused = false;
+                        state.username_field.focused = true;
+                        state.password_field.focused = false;
+                    } else if state.username_field.focused {
+                        state.server_field.focused = false;
                         state.username_field.focused = false;
                         state.password_field.focused = true;
                     } else {
-                        state.username_field.focused = true;
+                        state.server_field.focused = true;
+                        state.username_field.focused = false;
                         state.password_field.focused = false;
                     }
                 }
@@ -499,7 +509,11 @@ pub fn new_signout(app: &mut App) {
     if token::read_token().is_some() {
         let _ = token::delete_token();
     }
-    let state = State::SignedOut(SignedOutState::new());
+    let mut signed_out = SignedOutState::new();
+    if let Some(base_url) = chat_room_client::read_base_url() {
+        signed_out.server_field.text = base_url;
+    }
+    let state = State::SignedOut(signed_out);
 
     app.state = state;
     app.error = None;
