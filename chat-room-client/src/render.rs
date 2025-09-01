@@ -1,6 +1,7 @@
 use crate::asciiart;
 use crate::state::{App, AuthenticatedState, CreateRoomState, SignedOutState, State, Textfield};
 use qu_chat_models::Message;
+use ratatui::crossterm::style::style;
 use ratatui::layout::{Constraint, Flex, Layout};
 use ratatui::prelude::{Buffer, Rect};
 
@@ -100,7 +101,7 @@ impl<'r> Widget for &SignedOutState<'r> {
         self.username_field.render(username_are, buf);
         self.password_field.render(password_area, buf);
 
-        let content = Text::raw(asciiart::WELCOME);
+        let content = Text::raw(asciiart::WELCOME).style(Style::new());
         Paragraph::new(content).centered().render(welcome_area, buf);
     }
 }
