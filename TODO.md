@@ -1,4 +1,4 @@
-# TODO 
+## Server
 ### state
     Temp:
         [X] - onlines users
@@ -30,7 +30,25 @@
     [ ] - 404 not working??
     [X] - warnings[]
 
+## Client
+### Room
+    [X]- previous 20 messages
+    [x]- separate users chat from own
+    [x]- scroll for messages
+    [X]- sender of each message
+    [x]- user profile
+    [x] - logout
 
-## Final
-[] final test
-[] share + promotion
+    [x] create new room
+    [X]- date of each message
+    [X]- right or left messages
+
+### Profile section
+    settings
+    user profile
+    
+### Errors and loadings
+    [ ]-retry
+
+### Connect server to client
+    [X]-auth token persistence?
