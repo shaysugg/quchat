@@ -1,6 +1,8 @@
 <table>
 <tr>
 <td><img src="media/quchat-demo.gif"></td>
+</tr>
+<tr>
 <td><img src="media/quchat1.png"></td>
 <td><img src="media/quchat2.png"></td>
 </tr>
