@@ -1,8 +1,8 @@
 <table>
 <tr>
+<td><img src="media/quchat-demo.gif"></td>
 <td><img src="media/quchat1.png"></td>
 <td><img src="media/quchat2.png"></td>
-<td><img src="media/quchat3.png"></td>
 </tr>
 </table>
 
@@ -18,9 +18,9 @@
 To run the server locally, define the IP address of the machine where you want to host the server in `chat-room-server/Rocket.toml`. Then, run the clients and enter the server address that you configured on the welcome page.
 
 ### Server:
-The server uses [Rocket](https://rocket.rs) for most interactions, which are conducted through HTTP requests.
+The server uses [Rocket](https://rocket.rs) for most interactions, which are handled through HTTP requests.
 - For live updates, it utilizes Rocket's [EventStream](https://api.rocket.rs/master/rocket/response/stream/struct.EventStream) feature.
 - For authentication, I implemented JWT without relying on external libraries.
 - It uses SQLite for data persistence; however, I plan to replace it with Redis and PostgreSQL later for improved performance.
 ### Client:
-The client uses [Ratatui](https://ratatui.rs) for rendering in the terminal. Since the application can end up in complicated states, I defined all states and actions in an enum format and used a state machine to manage actions and produce their corresponding states. It utilizes multiple [tokio](https://tokio.rs/) spawn and channels to handle networking and long-running tasks, preventing UI freezing. A lightweight [reqwest](https://docs.rs/reqwest/latest/reqwest/) wrapper is also used for all networking communication with the server.
+The client uses [Ratatui](https://ratatui.rs) for rendering in the terminal. Since the application can end up in complicated states, I defined all states and actions in enum formats and used a state machine to manage actions and produce their corresponding states. It utilizes multiple [tokio](https://tokio.rs/) spawn and channels to handle networking and long-running tasks, preventing UI freezing. A lightweight [reqwest](https://docs.rs/reqwest/latest/reqwest/) wrapper is also used for all networking communication with the server.
